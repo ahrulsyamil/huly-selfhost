@@ -168,7 +168,8 @@ services:
       - STATS_URL=http://stats:4900
       - LAST_NAME_FIRST=${LAST_NAME_FIRST:-true}
       - QUEUE_CONFIG=redpanda:9092
-      - WEB_PUSH_URL=http://ses:3335
+      - WEB_PUSH_URL=http://notification:3335
+      - MAIL_URL=http://mail:8097
     restart: unless-stopped
     networks:
       - huly_net
@@ -204,6 +205,7 @@ services:
       - ACCOUNT_PORT=3000
       - QUEUE_CONFIG=redpanda:9092
       - DISABLE_SIGNUP=${DISABLE_SIGNUP:-true}
+      - MAIL_URL=http://mail:8097
     restart: unless-stopped
     networks:
       - huly_net
@@ -250,6 +252,8 @@ services:
       - LAST_NAME_FIRST=${LAST_NAME_FIRST:-true}
       - DESKTOP_UPDATES_CHANNEL=${DESKTOP_CHANNEL}
       - DISABLE_SIGNUP=${DISABLE_SIGNUP:-true}
+      - PUSH_PUBLIC_KEY=${PUSH_PUBLIC_KEY}
+      - PRINT_URL=http${SECURE:+s}://${HOST_ADDRESS}/_print
     restart: unless-stopped
     networks:
       - huly_net
@@ -279,6 +283,50 @@ services:
     environment:
       - PORT=4900
       - SERVER_SECRET=${SECRET}
+    restart: unless-stopped
+    networks:
+      - huly_net
+
+  notification:
+    container_name: huly-notification
+    image: hardcoreeng/notification:${HULY_VERSION}
+    environment:
+      - PORT=3335
+      - SOURCE=${SMTP_MAIL_FROM}
+      - ACCESS_KEY=none
+      - SECRET_KEY=none
+      - PUSH_PUBLIC_KEY=${PUSH_PUBLIC_KEY}
+      - PUSH_PRIVATE_KEY=${PUSH_PRIVATE_KEY}
+    restart: unless-stopped
+    networks:
+      - huly_net
+
+  mail:
+    container_name: huly-mail
+    image: hardcoreeng/mail:${HULY_VERSION}
+    ports:
+      - 8097:8097
+    environment:
+      - PORT=8097
+      - SOURCE=${SMTP_MAIL_FROM}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+    restart: unless-stopped
+    networks:
+      - huly_net
+
+  print:
+    image: hardcoreeng/print:${HULY_VERSION}
+    container_name: print
+    ports:
+      - 4005:4005
+    environment:
+      - STORAGE_CONFIG=${STORAGE_CONFIG}
+      - STATS_URL=http://stats:4900
+      - SECRET=${SECRET}
+      - ACCOUNTS_URL=http://account:3000
     restart: unless-stopped
     networks:
       - huly_net
