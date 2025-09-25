@@ -254,6 +254,7 @@ services:
       - DISABLE_SIGNUP=${DISABLE_SIGNUP:-true}
       - PUSH_PUBLIC_KEY=${PUSH_PUBLIC_KEY}
       - PRINT_URL=http${SECURE:+s}://${HOST_ADDRESS}/_print
+      - LIVEKIT_WS=${LIVEKIT_HOST}
     restart: unless-stopped
     networks:
       - huly_net
@@ -331,6 +332,45 @@ services:
     networks:
       - huly_net
 
+  mongodb:
+    container_name: huly-mongodb
+    image: mongo:7-jammy
+    ports:
+      - 27017:27017
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongodb:/data/db
+    networks:
+      - huly_net
+
+  love:
+    image: hardcoreeng/love:${HULY_VERSION}
+    container_name: love
+    ports:
+      - 8096:8096
+    environment:
+      - STORAGE_CONFIG=${STORAGE_CONFIG}
+      - SECRET=${SECRET}
+      - ACCOUNTS_URL=http://huly-account:3000
+      - DB_URL=${CR_DB_URL}
+      - MONGO_URL=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@huly-mongodb:27017
+      - MONGO_DB_NAME=love
+      - STORAGE_PROVIDER_NAME=minio
+      - PORT=8096
+      - LIVEKIT_HOST=${LIVEKIT_HOST}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+    restart: unless-stopped
+    networks:
+      - huly_net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
 volumes:
   # These named volumes are used when custom volume paths are not specified
   # If VOLUME_*_PATH variables are set, these volumes will be ignored
@@ -339,6 +379,7 @@ volumes:
   cr_data:
   cr_certs:
   redpanda:
+  mongodb:
 
 
 networks:
