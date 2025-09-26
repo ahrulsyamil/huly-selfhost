@@ -371,6 +371,40 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  kvs:
+    image: hardcoreeng/hulykvs:${HULY_VERSION}
+    container_name: kvs
+    ports:
+      - "8094:8094"
+    environment:
+      - HULY_BIND_PORT=8094
+      - HULY_DB_CONNECTION=${CR_DB_URL}
+      - SECRET=${SECRET}
+      - HULY_TOKEN_SECRET=${SECRET}
+    restart: unless-stopped
+    networks:
+      - huly_net
+
+  calendar:
+    container_name: huly-calendar
+    image: hardcoreeng/calendar:${HULY_VERSION}
+    ports:
+      - 8095:8095
+    environment:
+      - MONGO_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@huly-mongodb:27017
+      - MONGO_DB=%calendar-service
+      - KVS_URL=http://kvs:8094
+      - Credentials=${GOOGLE_CONSOLE_CREDENTIALS_JSON}
+      - WATCH_URL=https://${HOST_ADDRESS}/_calendar/push
+      - ACCOUNTS_URL=http://account:3000
+      - STATS_URL=http://stats:4900
+      - SECRET=${SECRET}
+    restart: unless-stopped
+    networks:
+      - huly_net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
 volumes:
   # These named volumes are used when custom volume paths are not specified
   # If VOLUME_*_PATH variables are set, these volumes will be ignored
