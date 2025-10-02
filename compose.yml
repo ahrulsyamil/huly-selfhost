@@ -98,8 +98,6 @@ services:
       retries: 3
     networks:
       - huly_net
-    profiles:
-      - disabled
 
   elastic:
     container_name: huly-elastic
