@@ -79,7 +79,6 @@ services:
     profiles:
       - optional
 
-  # Use shared object storage
   minio:
     image: minio/minio:RELEASE.2025-04-22T22-12-26Z
     container_name: huly-minio
@@ -187,7 +186,6 @@ services:
     restart: unless-stopped
     networks:
       - huly_net
-      - zegen-network
 
   collaborator:
     container_name: huly-collaborator
@@ -208,7 +206,6 @@ services:
     restart: unless-stopped
     networks:
       - huly_net
-      - zegen-network
 
   account:
     container_name: huly-account
@@ -239,7 +236,6 @@ services:
     restart: unless-stopped
     networks:
       - huly_net
-      - zegen-network
 
   workspace:
     container_name: huly-workspace
@@ -268,7 +264,6 @@ services:
     restart: unless-stopped
     networks:
       - huly_net
-      - zegen-network
 
   front:
     container_name: huly-front
@@ -310,7 +305,6 @@ services:
     restart: unless-stopped
     networks:
       - huly_net
-      - zegen-network
 
   fulltext:
     container_name: huly-fulltext
@@ -343,7 +337,6 @@ services:
     restart: unless-stopped
     networks:
       - huly_net
-      - zegen-network
 
   stats:
     container_name: huly-stats
@@ -532,5 +525,3 @@ volumes:
 
 networks:
   huly_net:
-  zegen-network:
-    external: true
