@@ -99,10 +99,10 @@ services:
       - optional
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.redpanda-console.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_redpanda`)"
+      - "traefik.http.routers.redpanda-console.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/redpanda`)"
       - "traefik.http.routers.redpanda-console.entrypoints=web"
       - "traefik.http.services.redpanda-console.loadbalancer.server.port=8080"
-      - "traefik.http.middlewares.redpanda-strip.stripprefix.prefixes=/_redpanda"
+      - "traefik.http.middlewares.redpanda-strip.stripprefix.prefixes=/redpanda"
       - "traefik.http.routers.redpanda-console.middlewares=redpanda-strip"
 
   minio:
@@ -281,7 +281,7 @@ services:
       - SERVER_PORT=3000
       - SERVER_SECRET=${SECRET}
       - DB_URL=${CR_DB_URL}
-      - TRANSACTOR_URL=ws://transactor:3333;ws${SECURE:+s}://${HOST_ADDRESS}/_transactor
+      - TRANSACTOR_URL=ws://transactor:3333;ws${SECURE:+s}://${HOST_ADDRESS}/transactor
       - STORAGE_CONFIG=${STORAGE_CONFIG}
       - FRONT_URL=http${SECURE:+s}://${HOST_ADDRESS}
       - STATS_URL=http${SECURE:+s}://${HOST_ADDRESS}/stats
@@ -318,7 +318,7 @@ services:
     environment:
       - SERVER_SECRET=${SECRET}
       - DB_URL=${CR_DB_URL}
-      - TRANSACTOR_URL=ws://transactor:3333;ws${SECURE:+s}://${HOST_ADDRESS}/_transactor
+      - TRANSACTOR_URL=ws://transactor:3333;ws${SECURE:+s}://${HOST_ADDRESS}/transactor
       - STORAGE_CONFIG=${STORAGE_CONFIG}
       - MODEL_ENABLED=*
       - ACCOUNTS_URL=http://account:3000
@@ -467,7 +467,7 @@ services:
 
   print:
     image: hardcoreeng/print:${HULY_VERSION}
-    container_name: print
+    container_name: huly-print
     environment:
       - STORAGE_CONFIG=${STORAGE_CONFIG}
       - STATS_URL=http://stats:4900
@@ -510,7 +510,7 @@ services:
 
   love:
     image: hardcoreeng/love:${HULY_VERSION}
-    container_name: love
+    container_name: huly-love
     environment:
       - STORAGE_CONFIG=${STORAGE_CONFIG}
       - SECRET=${SECRET}
@@ -550,7 +550,7 @@ services:
 
   kvs:
     image: hardcoreeng/hulykvs:${HULY_VERSION}
-    container_name: kvs
+    container_name: huly-kvs
     environment:
       - HULY_BIND_PORT=8094
       - HULY_DB_CONNECTION=${CR_DB_URL}
@@ -571,7 +571,7 @@ services:
       - MONGO_DB=%calendar-service
       - KVS_URL=http://kvs:8094
       - Credentials=${GOOGLE_CONSOLE_CREDENTIALS_JSON}
-      - WATCH_URL=https://${HOST_ADDRESS}/_calendar/push
+      - WATCH_URL=https://${HOST_ADDRESS}/calendar/push
       - ACCOUNTS_URL=http://account:3000
       - STATS_URL=http://stats:4900
       - SECRET=${SECRET}
@@ -591,10 +591,10 @@ services:
       - "host.docker.internal:host-gateway"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.calendar.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_calendar`)"
+      - "traefik.http.routers.calendar.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/calendar`)"
       - "traefik.http.routers.calendar.entrypoints=web"
       - "traefik.http.services.calendar.loadbalancer.server.port=8095"
-      - "traefik.http.middlewares.calendar-strip.stripprefix.prefixes=/_calendar"
+      - "traefik.http.middlewares.calendar-strip.stripprefix.prefixes=/calendar"
       - "traefik.http.routers.calendar.middlewares=calendar-strip"
 
   livekit:
