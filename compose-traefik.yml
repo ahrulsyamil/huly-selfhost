@@ -613,6 +613,30 @@ services:
     restart: unless-stopped
     networks:
       - internal-services
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      # WebSocket route
+      - "traefik.http.routers.livekit-ws.entrypoints=websecure"
+      - "traefik.http.routers.livekit-ws.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/ws/livekit`)"
+      - "traefik.http.routers.livekit-ws.tls=true"
+      - "traefik.http.routers.livekit-ws.tls.certresolver=letsencrypt"
+      - "traefik.http.services.livekit-ws.loadbalancer.server.port=7880"
+      - "traefik.http.routers.livekit-ws.service=livekit-ws"
+
+      # Strip WebSocket prefix
+      - "traefik.http.routers.livekit-ws.middlewares=strip-livekit-ws-prefix"
+      - "traefik.http.middlewares.strip-livekit-ws-prefix.stripprefix.prefixes=/ws/livekit"
+      # HTTP route for non-WebSocket traffic
+      - "traefik.http.routers.livekit.entrypoints=websecure"
+      - "traefik.http.routers.livekit.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/livekit`)"
+      - "traefik.http.routers.livekit.tls=true"
+      - "traefik.http.routers.livekit.tls.certresolver=letsencrypt"
+      - "traefik.http.services.livekit.loadbalancer.server.port=7881"
+
+      # Strip HTTP prefix
+      - "traefik.http.routers.livekit.middlewares=strip-livekit-prefix"
+      - "traefik.http.middlewares.strip-livekit-prefix.stripprefix.prefixes=/livekit"
 
 volumes:
   # These named volumes are used when custom volume paths are not specified
