@@ -644,3 +644,6 @@ networks:
   internal-services:
     name: internal-services
     external: true
+  traefik-public:
+    name: traefik-public
+    external: true
