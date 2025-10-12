@@ -600,7 +600,7 @@ services:
   livekit:
     container_name: huly-livekit
     image: livekit/livekit-server:latest
-    command: --config /etc/livekit.yaml
+    command: --config /etc/livekit/livekit.yaml
     ports:
       - "7880:7880"
       - "7881:7881"
@@ -609,7 +609,7 @@ services:
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
     volumes:
-      - ./livekit.yaml:/etc/livekit.yaml
+      - ./livekit.yaml:/etc/livekit/livekit.yaml:ro
     restart: unless-stopped
     networks:
       - internal-services
