@@ -1,32 +1,44 @@
 name: ${DOCKER_NAME}
 services:
   traefik:
-    container_name: huly-traefik
-    image: "traefik:v3.2"
+    restart: unless-stopped
+    image: "traefik:v2.10"
+    container_name: "traefik"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - ./letsencrypt:/letsencrypt
+    networks:
+      - traefik-public
     command:
-      - "--api.insecure=true"
+      - "--log.level=DEBUG" # set to INFO for production
+      - "--api.insecure=false"
       - "--api.dashboard=true"
+      - "--global.sendAnonymousUsage=false"
+      - "--global.checkNewVersion=false"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.file.filename=/etc/traefik/dynamic.yml"
-      - "--providers.file.watch=true"
+      - "--providers.docker.network=traefik-public"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      - "--log.level=INFO"
-    ports:
-      - "${HTTP_BIND}:${HTTP_PORT}:80"
-      - "443:443"
-      - "8080:8080" # Traefik dashboard
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik-dynamic.yml:/etc/traefik/dynamic.yml:ro
-    restart: unless-stopped
-    networks:
-      - huly_net
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--certificatesresolvers.myresolver.acme.email=developers@zegen.id"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.caserver=http://acme-staging-v02.api.letsencrypt.org/directory" # For testing, comment out for production
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.${HOST_ADDRESS}`)"
-      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.traefik.rule=Host(`project.zegenbox.com`) && (PathPrefix(`/api`) || PathPrefix(`/traefik`))"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      # strip prefix for traefik dashboard
+      - "traefik.http.routers.traefik.middlewares=strip-prefix-traefik"
+      - "traefik.http.middlewares.strip-prefix-traefik.stripprefix.prefixes=/traefik"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.routers.traefik.tls.certresolver=myresolver"
 
   cockroach:
     container_name: huly-cockroach
@@ -41,7 +53,7 @@ services:
       - ${VOLUME_CR_CERTS_PATH:-cr_certs}:/cockroach/certs
     restart: unless-stopped
     networks:
-      - huly_net
+      - internal-services
 
   redpanda:
     container_name: huly-redpanda
@@ -70,7 +82,7 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - huly_net
+      - internal-services
 
   redpanda-console:
     container_name: huly-redpanda-console
@@ -82,7 +94,7 @@ services:
     depends_on:
       - redpanda
     networks:
-      - huly_net
+      - internal-services
     profiles:
       - optional
     labels:
@@ -113,7 +125,7 @@ services:
       timeout: 20s
       retries: 3
     networks:
-      - huly_net
+      - internal-services
 
   elastic:
     container_name: huly-elastic
@@ -139,26 +151,7 @@ services:
       test: curl -s http://localhost:9200/_cluster/health | grep -vq '"status":"red"'
     restart: unless-stopped
     networks:
-      - huly_net
-
-  kibana:
-    container_name: huly-kibana
-    image: kibana:7.14.2
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elastic:9200
-    depends_on:
-      - elastic
-    networks:
-      - huly_net
-    profiles:
-      - optional
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.kibana.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_kibana`)"
-      - "traefik.http.routers.kibana.entrypoints=web"
-      - "traefik.http.services.kibana.loadbalancer.server.port=5601"
-      - "traefik.http.middlewares.kibana-strip.stripprefix.prefixes=/_kibana"
-      - "traefik.http.routers.kibana.middlewares=kibana-strip"
+      - internal-services
 
   rekoni:
     container_name: huly-rekoni
@@ -171,14 +164,17 @@ services:
           memory: 500M
     restart: unless-stopped
     networks:
-      - huly_net
+      - internal-services
+      - traefik-public
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.rekoni.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_rekoni`)"
-      - "traefik.http.routers.rekoni.entrypoints=web"
+      - "traefik.http.routers.rekoni.entrypoints=websecure"
       - "traefik.http.services.rekoni.loadbalancer.server.port=4004"
-      - "traefik.http.middlewares.rekoni-strip.stripprefix.prefixes=/_rekoni"
-      - "traefik.http.routers.rekoni.middlewares=rekoni-strip"
+      - "traefik.http.routers.rekoni.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/rekoni`)"
+      - "traefik.http.routers.rekoni.middlewares=rekoni-stripprefix"
+      - "traefik.http.middlewares.rekoni-stripprefix.stripprefix.prefixes=/rekoni"
+      - "traefik.http.routers.rekoni.tls=true"
+      - "traefik.http.routers.rekoni.tls.certresolver=letsencrypt"
 
   transactor:
     container_name: huly-transactor
@@ -211,14 +207,32 @@ services:
         condition: service_started
     restart: unless-stopped
     networks:
-      - huly_net
+      - internal-services
+      - traefik-public
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.transactor.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_transactor`)"
-      - "traefik.http.routers.transactor.entrypoints=web"
+      # WebSocket route
+      - "traefik.http.routers.transactor-ws.entrypoints=websecure"
+      - "traefik.http.routers.transactor-ws.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/ws/transactor`)"
+      - "traefik.http.routers.transactor-ws.tls=true"
+      - "traefik.http.routers.transactor-ws.tls.certresolver=letsencrypt"
+      - "traefik.http.services.transactor-ws.loadbalancer.server.port=3333"
+      - "traefik.http.routers.transactor-ws.service=transactor-ws"
+
+      # Strip WebSocket prefix
+      - "traefik.http.routers.transactor-ws.middlewares=strip-transactor-ws-prefix"
+      - "traefik.http.middlewares.strip-transactor-ws-prefix.stripprefix.prefixes=/ws/transactor"
+
+      # HTTP route for non-WebSocket traffic
+      - "traefik.http.routers.transactor.entrypoints=websecure"
+      - "traefik.http.routers.transactor.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/transactor`)"
+      - "traefik.http.routers.transactor.tls=true"
+      - "traefik.http.routers.transactor.tls.certresolver=letsencrypt"
       - "traefik.http.services.transactor.loadbalancer.server.port=3333"
-      - "traefik.http.middlewares.transactor-strip.stripprefix.prefixes=/_transactor"
-      - "traefik.http.routers.transactor.middlewares=transactor-strip"
+      - "traefik.http.routers.transactor.service=transactor"
+      # Strip HTTP prefix
+      - "traefik.http.routers.transactor.middlewares=strip-transactor-prefix"
+      - "traefik.http.middlewares.strip-transactor-prefix.stripprefix.prefixes=/transactor"
 
   collaborator:
     container_name: huly-collaborator
@@ -238,14 +252,31 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - huly_net
+      - internal-services
+      - traefik-public
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.collaborator.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_collaborator`)"
-      - "traefik.http.routers.collaborator.entrypoints=web"
+      # WebSocket route
+      - "traefik.http.routers.collaborator-ws.entrypoints=websecure"
+      - "traefik.http.routers.collaborator-ws.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/ws/collaborator`)"
+      - "traefik.http.routers.collaborator-ws.tls=true"
+      - "traefik.http.routers.collaborator-ws.tls.certresolver=letsencrypt"
+      - "traefik.http.services.collaborator-ws.loadbalancer.server.port=3078"
+      - "traefik.http.routers.collaborator-ws.service=collaborator-ws"
+
+      # Strip WebSocket prefix
+      - "traefik.http.routers.collaborator-ws.middlewares=strip-collaborator-ws-prefix"
+      - "traefik.http.middlewares.strip-collaborator-ws-prefix.stripprefix.prefixes=/ws/collaborator"
+      # HTTP route for non-WebSocket traffic
+      - "traefik.http.routers.collaborator.entrypoints=websecure"
+      - "traefik.http.routers.collaborator.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/collaborator`)"
+      - "traefik.http.routers.collaborator.tls=true"
+      - "traefik.http.routers.collaborator.tls.certresolver=letsencrypt"
       - "traefik.http.services.collaborator.loadbalancer.server.port=3078"
-      - "traefik.http.middlewares.collaborator-strip.stripprefix.prefixes=/_collaborator"
-      - "traefik.http.routers.collaborator.middlewares=collaborator-strip"
+
+      # Strip HTTP prefix
+      - "traefik.http.routers.collaborator.middlewares=strip-collaborator-prefix"
+      - "traefik.http.middlewares.strip-collaborator-prefix.stripprefix.prefixes=/collaborator"
 
   account:
     container_name: huly-account
@@ -275,14 +306,17 @@ services:
         condition: service_started
     restart: unless-stopped
     networks:
-      - huly_net
+      - internal-services
+      - traefik-public
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.account.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_accounts`)"
-      - "traefik.http.routers.account.entrypoints=web"
+      - "traefik.http.routers.account.entrypoints=websecure"
       - "traefik.http.services.account.loadbalancer.server.port=3000"
-      - "traefik.http.middlewares.account-strip.stripprefix.prefixes=/_accounts"
-      - "traefik.http.routers.account.middlewares=account-strip"
+      - "traefik.http.routers.account.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/accounts`)"
+      - "traefik.http.routers.account.middlewares=account-stripprefix"
+      - "traefik.http.middlewares.account-stripprefix.stripprefix.prefixes=/accounts"
+      - "traefik.http.routers.account.tls=true"
+      - "traefik.http.routers.account.tls.certresolver=letsencrypt"
 
   workspace:
     container_name: huly-workspace
@@ -310,7 +344,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - huly_net
+      - internal-services
 
   front:
     container_name: huly-front
@@ -318,17 +352,17 @@ services:
     environment:
       - SERVER_PORT=8080
       - SERVER_SECRET=${SECRET}
-      - LOVE_ENDPOINT=http${SECURE:+s}://${HOST_ADDRESS}/_love
-      - ACCOUNTS_URL=http${SECURE:+s}://${HOST_ADDRESS}/_accounts
+      - LOVE_ENDPOINT=http${SECURE:+s}://${HOST_ADDRESS}/love
+      - ACCOUNTS_URL=http${SECURE:+s}://${HOST_ADDRESS}/accounts
       - ACCOUNTS_URL_INTERNAL=http://account:3000
-      - REKONI_URL=http${SECURE:+s}://${HOST_ADDRESS}/_rekoni
-      - CALENDAR_URL=http${SECURE:+s}://${HOST_ADDRESS}/_calendar
-      - GMAIL_URL=http${SECURE:+s}://${HOST_ADDRESS}/_gmail
-      - TELEGRAM_URL=http${SECURE:+s}://${HOST_ADDRESS}/_telegram
-      - STATS_URL=http${SECURE:+s}://${HOST_ADDRESS}/_stats
+      - REKONI_URL=http${SECURE:+s}://${HOST_ADDRESS}/rekoni
+      - CALENDAR_URL=http${SECURE:+s}://${HOST_ADDRESS}:8095
+      - GMAIL_URL=http${SECURE:+s}://${HOST_ADDRESS}:8088
+      - TELEGRAM_URL=http${SECURE:+s}://${HOST_ADDRESS}:8086
+      - STATS_URL=http${SECURE:+s}://${HOST_ADDRESS}/stats
       - UPLOAD_URL=/files
       - ELASTIC_URL=http://elastic:9200
-      - COLLABORATOR_URL=ws${SECURE:+s}://${HOST_ADDRESS}/_collaborator
+      - COLLABORATOR_URL=ws${SECURE:+s}://${HOST_ADDRESS}/ws/collaborator
       - STORAGE_CONFIG=${STORAGE_CONFIG}
       - TITLE=${TITLE:-Huly Self Host}
       - DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-en}
@@ -336,7 +370,7 @@ services:
       - DESKTOP_UPDATES_CHANNEL=${DESKTOP_CHANNEL}
       - DISABLE_SIGNUP=${DISABLE_SIGNUP:-true}
       - PUSH_PUBLIC_KEY=${PUSH_PUBLIC_KEY}
-      - PRINT_URL=http${SECURE:+s}://${HOST_ADDRESS}/_print
+      - PRINT_URL=http${SECURE:+s}://${HOST_ADDRESS}/print
       - LIVEKIT_WS=${LIVEKIT_HOST}
     depends_on:
       account:
@@ -351,13 +385,15 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - huly_net
+      - internal-services
+      - traefik-public
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.front.rule=Host(`${HOST_ADDRESS}`)"
-      - "traefik.http.routers.front.entrypoints=web"
-      - "traefik.http.routers.front.priority=1"
+      - "traefik.http.routers.front.entrypoints=websecure"
       - "traefik.http.services.front.loadbalancer.server.port=8080"
+      - "traefik.http.routers.front.rule=Host(`${HOST_ADDRESS}`)"
+      - "traefik.http.routers.front.tls=true"
+      - "traefik.http.routers.front.tls.certresolver=letsencrypt"
 
   fulltext:
     container_name: huly-fulltext
@@ -389,7 +425,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - huly_net
+      - internal-services
 
   stats:
     container_name: huly-stats
@@ -399,14 +435,17 @@ services:
       - SERVER_SECRET=${SECRET}
     restart: unless-stopped
     networks:
-      - huly_net
+      - internal-services
+      - traefik-public
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.stats.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_stats`)"
-      - "traefik.http.routers.stats.entrypoints=web"
+      - "traefik.http.routers.stats.entrypoints=websecure"
       - "traefik.http.services.stats.loadbalancer.server.port=4900"
-      - "traefik.http.middlewares.stats-strip.stripprefix.prefixes=/_stats"
-      - "traefik.http.routers.stats.middlewares=stats-strip"
+      - "traefik.http.routers.stats.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/stats`)"
+      - "traefik.http.routers.stats.middlewares=stats-stripprefix"
+      - "traefik.http.middlewares.stats-stripprefix.stripprefix.prefixes=/stats"
+      - "traefik.http.routers.stats.tls=true"
+      - "traefik.http.routers.stats.tls.certresolver=letsencrypt"
 
   notification:
     container_name: huly-notification
@@ -420,7 +459,7 @@ services:
       - PUSH_PRIVATE_KEY=${PUSH_PRIVATE_KEY}
     restart: unless-stopped
     networks:
-      - huly_net
+      - internal-services
 
   mail:
     container_name: huly-mail
@@ -436,7 +475,7 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD}
     restart: unless-stopped
     networks:
-      - huly_net
+      - internal-services
 
   print:
     image: hardcoreeng/print:${HULY_VERSION}
@@ -455,14 +494,17 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - huly_net
+      - internal-services
+      - traefik-public
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.print.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_print`)"
-      - "traefik.http.routers.print.entrypoints=web"
+      - "traefik.http.routers.print.entrypoints=websecure"
       - "traefik.http.services.print.loadbalancer.server.port=4005"
-      - "traefik.http.middlewares.print-strip.stripprefix.prefixes=/_print"
-      - "traefik.http.routers.print.middlewares=print-strip"
+      - "traefik.http.routers.print.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/print`)"
+      - "traefik.http.routers.print.middlewares=print-stripprefix"
+      - "traefik.http.middlewares.print-stripprefix.stripprefix.prefixes=/print"
+      - "traefik.http.routers.print.tls=true"
+      - "traefik.http.routers.print.tls.certresolver=letsencrypt"
 
   mongodb:
     container_name: huly-mongodb
@@ -478,7 +520,7 @@ services:
     volumes:
       - mongodb:/data/db
     networks:
-      - huly_net
+      - internal-services
 
   love:
     image: hardcoreeng/love:${HULY_VERSION}
@@ -508,16 +550,19 @@ services:
         condition: service_started
     restart: unless-stopped
     networks:
-      - huly_net
+      - internal-services
+      - traefik-public
     extra_hosts:
       - "host.docker.internal:host-gateway"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.love.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_love`)"
-      - "traefik.http.routers.love.entrypoints=web"
+      - "traefik.http.routers.love.entrypoints=websecure"
       - "traefik.http.services.love.loadbalancer.server.port=8096"
-      - "traefik.http.middlewares.love-strip.stripprefix.prefixes=/_love"
-      - "traefik.http.routers.love.middlewares=love-strip"
+      - "traefik.http.routers.love.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/love`)"
+      - "traefik.http.routers.love.middlewares=love-stripprefix"
+      - "traefik.http.middlewares.love-stripprefix.stripprefix.prefixes=/love"
+      - "traefik.http.routers.love.tls=true"
+      - "traefik.http.routers.love.tls.certresolver=letsencrypt"
 
   kvs:
     image: hardcoreeng/hulykvs:${HULY_VERSION}
@@ -532,7 +577,7 @@ services:
         condition: service_started
     restart: unless-stopped
     networks:
-      - huly_net
+      - internal-services
 
   calendar:
     container_name: huly-calendar
@@ -557,7 +602,7 @@ services:
         condition: service_started
     restart: unless-stopped
     networks:
-      - huly_net
+      - internal-services
     extra_hosts:
       - "host.docker.internal:host-gateway"
     labels:
@@ -583,7 +628,7 @@ services:
       - ./livekit.yaml:/etc/livekit.yaml
     restart: unless-stopped
     networks:
-      - huly_net
+      - internal-services
 
 volumes:
   # These named volumes are used when custom volume paths are not specified
@@ -596,4 +641,6 @@ volumes:
   mongodb:
 
 networks:
-  huly_net:
+  internal-services:
+    name: internal-services
+    external: true
