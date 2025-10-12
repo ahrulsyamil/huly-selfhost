@@ -197,8 +197,6 @@ services:
         condition: service_started
       redpanda:
         condition: service_healthy
-      minio:
-        condition: service_healthy
       stats:
         condition: service_started
       notification:
@@ -248,8 +246,6 @@ services:
         condition: service_started
       stats:
         condition: service_started
-      minio:
-        condition: service_healthy
     restart: unless-stopped
     networks:
       - internal-services
@@ -300,8 +296,6 @@ services:
         condition: service_started
       redpanda:
         condition: service_healthy
-      minio:
-        condition: service_healthy
       mail:
         condition: service_started
     restart: unless-stopped
@@ -340,8 +334,6 @@ services:
         condition: service_started
       stats:
         condition: service_started
-      minio:
-        condition: service_healthy
     restart: unless-stopped
     networks:
       - internal-services
@@ -381,8 +373,6 @@ services:
         condition: service_started
       rekoni:
         condition: service_started
-      minio:
-        condition: service_healthy
     restart: unless-stopped
     networks:
       - internal-services
@@ -421,8 +411,6 @@ services:
         condition: service_started
       stats:
         condition: service_started
-      minio:
-        condition: service_healthy
     restart: unless-stopped
     networks:
       - internal-services
@@ -490,8 +478,6 @@ services:
         condition: service_started
       account:
         condition: service_started
-      minio:
-        condition: service_healthy
     restart: unless-stopped
     networks:
       - internal-services
@@ -544,8 +530,6 @@ services:
         condition: service_started
       mongodb:
         condition: service_started
-      minio:
-        condition: service_healthy
       livekit:
         condition: service_started
     restart: unless-stopped
