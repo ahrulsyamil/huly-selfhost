@@ -7,6 +7,11 @@ services:
       - "${HTTP_BIND}:${HTTP_PORT}:80"
     volumes:
       - ./.huly.nginx:/etc/nginx/conf.d/default.conf
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
     depends_on:
       front:
         condition: service_started
@@ -28,6 +33,11 @@ services:
     volumes:
       - ${VOLUME_CR_DATA_PATH:-cr_data}:/cockroach/cockroach-data
       - ${VOLUME_CR_CERTS_PATH:-cr_certs}:/cockroach/certs
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
     restart: unless-stopped
     networks:
       - huly_net
@@ -55,6 +65,11 @@ services:
     environment:
       - REDPANDA_SUPERUSER_USERNAME=${REDPANDA_ADMIN_USER}
       - REDPANDA_SUPERUSER_PASSWORD=${REDPANDA_ADMIN_PWD}
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
     healthcheck:
       test: [ 'CMD', 'rpk', 'cluster', 'info', '-X', 'brokers=redpanda:9092' ]
       interval: 10s
@@ -72,6 +87,11 @@ services:
       - KAFKA_BROKERS=redpanda:9092
       - REDPANDA_ADMIN_API_URL=http://redpanda:9644
       - REDPANDA_ADMIN_API_TLS_ENABLED=false
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
     depends_on:
       - redpanda
     networks:
@@ -93,6 +113,11 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - ${VOLUME_FILES_PATH:-files}:/data
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
       interval: 30s
@@ -119,6 +144,11 @@ services:
     ports:
       - "${ELASTIC_PORT:-9200}:9200"
       - "${ELASTIC_PORT_HTTP:-9300}:9300"
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G
+          cpus: '1.0'
     healthcheck:
       interval: 20s
       retries: 10
@@ -134,6 +164,11 @@ services:
       - "5601:5601"
     environment:
       - ELASTICSEARCH_HOSTS=http://elastic:9200
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
     depends_on:
       - elastic
     networks:
@@ -170,6 +205,11 @@ services:
       - QUEUE_CONFIG=redpanda:9092
       - WEB_PUSH_URL=http://notification:3335
       - MAIL_URL=http://mail:8097
+    deploy:
+      resources:
+        limits:
+          memory: 500M
+          cpus: '0.5'
     depends_on:
       cockroach:
         condition: service_started
@@ -196,6 +236,11 @@ services:
       - ACCOUNTS_URL=http://account:3000
       - STATS_URL=http://stats:4900
       - STORAGE_CONFIG=${STORAGE_CONFIG}
+    deploy:
+      resources:
+        limits:
+          memory: 400M
+          cpus: '0.5'
     depends_on:
       account:
         condition: service_started
@@ -224,6 +269,11 @@ services:
       - QUEUE_CONFIG=redpanda:9092
       - DISABLE_SIGNUP=${DISABLE_SIGNUP:-true}
       - MAIL_URL=http://mail:8097
+    deploy:
+      resources:
+        limits:
+          memory: 500M
+          cpus: '0.5'
     depends_on:
       cockroach:
         condition: service_started
@@ -250,6 +300,11 @@ services:
       - STATS_URL=http://stats:4900
       - QUEUE_CONFIG=redpanda:9092
       - ACCOUNTS_DB_URL=${CR_DB_URL}
+    deploy:
+      resources:
+        limits:
+          memory: 400M
+          cpus: '0.5'
     depends_on:
       cockroach:
         condition: service_started
@@ -291,6 +346,11 @@ services:
       - PUSH_PUBLIC_KEY=${PUSH_PUBLIC_KEY}
       - PRINT_URL=http${SECURE:+s}://${HOST_ADDRESS}/_print
       - LIVEKIT_WS=${LIVEKIT_HOST}
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
     depends_on:
       account:
         condition: service_started
@@ -319,6 +379,11 @@ services:
       - ACCOUNTS_URL=http://account:3000
       - STATS_URL=http://stats:4900
       - QUEUE_CONFIG=redpanda:9092
+    deploy:
+      resources:
+        limits:
+          memory: 400M
+          cpus: '0.5'
     depends_on:
       cockroach:
         condition: service_started
@@ -344,6 +409,11 @@ services:
     environment:
       - PORT=4900
       - SERVER_SECRET=${SECRET}
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
     restart: unless-stopped
     networks:
       - huly_net
@@ -358,6 +428,11 @@ services:
       - SECRET_KEY=none
       - PUSH_PUBLIC_KEY=${PUSH_PUBLIC_KEY}
       - PUSH_PRIVATE_KEY=${PUSH_PRIVATE_KEY}
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
     restart: unless-stopped
     networks:
       - huly_net
@@ -374,6 +449,11 @@ services:
       - SMTP_PORT=${SMTP_PORT}
       - SMTP_USERNAME=${SMTP_USERNAME}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
     restart: unless-stopped
     networks:
       - huly_net
@@ -388,6 +468,11 @@ services:
       - STATS_URL=http://stats:4900
       - SECRET=${SECRET}
       - ACCOUNTS_URL=http://account:3000
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
     depends_on:
       stats:
         condition: service_started
@@ -412,6 +497,11 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
       - mongodb:/data/db
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
     networks:
       - huly_net
 
@@ -432,6 +522,11 @@ services:
       - LIVEKIT_HOST=${LIVEKIT_HOST}
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+    deploy:
+      resources:
+        limits:
+          memory: 400M
+          cpus: '0.5'
     depends_on:
       account:
         condition: service_started
@@ -459,6 +554,11 @@ services:
       - HULY_DB_CONNECTION=${CR_DB_URL}
       - SECRET=${SECRET}
       - HULY_TOKEN_SECRET=${SECRET}
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
     depends_on:
       cockroach:
         condition: service_started
@@ -480,6 +580,11 @@ services:
       - ACCOUNTS_URL=http://account:3000
       - STATS_URL=http://stats:4900
       - SECRET=${SECRET}
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+          cpus: '0.25'
     depends_on:
       mongodb:
         condition: service_started
@@ -508,6 +613,11 @@ services:
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
     volumes:
       - ./livekit.yaml:/etc/livekit.yaml
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
     restart: unless-stopped
     networks:
       - huly_net
