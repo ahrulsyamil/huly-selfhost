@@ -414,7 +414,7 @@ services:
       - PUSH_PUBLIC_KEY=${PUSH_PUBLIC_KEY}
       - PRINT_URL=http${SECURE:+s}://${HOST_ADDRESS}/_print
       - LIVEKIT_WS=${LIVEKIT_HOST}
-      - GITHUB_APP=${GITHUB_APPID}
+      - GITHUB_APP=${GITHUB_APP}
       - GITHUB_CLIENTID=${GITHUB_CLIENTID}
     deploy:
       resources:
