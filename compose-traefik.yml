@@ -321,7 +321,7 @@ services:
       - SERVER_PORT=3000
       - SERVER_SECRET=${SECRET}
       - DB_URL=${CR_DB_URL}
-      - TRANSACTOR_URL=ws://transactor:3333;ws${SECURE:+s}://${HOST_ADDRESS}/_transactor
+      - TRANSACTOR_URL=ws://transactor:3333;ws${SECURE:+s}://${HOST_ADDRESS}/ws/transactor
       - STORAGE_CONFIG=${STORAGE_CONFIG}
       - FRONT_URL=http${SECURE:+s}://${HOST_ADDRESS}
       - STATS_URL=http${SECURE:+s}://${HOST_ADDRESS}/_stats
@@ -363,7 +363,7 @@ services:
     environment:
       - SERVER_SECRET=${SECRET}
       - DB_URL=${CR_DB_URL}
-      - TRANSACTOR_URL=ws://transactor:3333;ws${SECURE:+s}://${HOST_ADDRESS}/_transactor
+      - TRANSACTOR_URL=ws://transactor:3333;ws${SECURE:+s}://${HOST_ADDRESS}/ws/transactor
       - STORAGE_CONFIG=${STORAGE_CONFIG}
       - MODEL_ENABLED=*
       - ACCOUNTS_URL=http://account:3000
