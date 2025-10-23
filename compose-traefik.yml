@@ -555,7 +555,7 @@ services:
       - CLIENT_ID=${GITHUB_CLIENTID}
       - CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
       - PRIVATE_KEY=${GITHUB_PRIVATE_KEY}
-      - COLLABORATOR_URL=ws${SECURE:+s}://${HOST_ADDRESS}/_collaborator
+      - COLLABORATOR_URL=ws${SECURE:+s}://${HOST_ADDRESS}/ws/collaborator
       - WEBHOOK_SECRET={GITHUB_WEBHOOK_SECRET}
       - FRONT_URL=http${SECURE:+s}://${HOST_ADDRESS}
       - BOT_NAME=${APP_NAME}[bot]
