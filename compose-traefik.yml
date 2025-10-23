@@ -36,12 +36,12 @@ services:
       - "--certificatesresolvers.myresolver.acme.caserver=http://acme-staging-v02.api.letsencrypt.org/directory" # For testing, comment out for production
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.traefik.rule=Host(`project.zegenbox.com`) && (PathPrefix(`/api`) || PathPrefix(`/traefik`))"
+      - "traefik.http.routers.traefik.rule=Host(`project.zegenbox.com`) && (PathPrefix(`/_api`) || PathPrefix(`/_traefik`))"
       - "traefik.http.routers.traefik.service=api@internal"
       - "traefik.http.routers.traefik.entrypoints=websecure"
       # strip prefix for traefik dashboard
       - "traefik.http.routers.traefik.middlewares=strip-prefix-traefik"
-      - "traefik.http.middlewares.strip-prefix-traefik.stripprefix.prefixes=/traefik"
+      - "traefik.http.middlewares.strip-prefix-traefik.stripprefix.prefixes=/_traefik"
       - "traefik.http.routers.traefik.tls=true"
       - "traefik.http.routers.traefik.tls.certresolver=myresolver"
 
@@ -119,10 +119,10 @@ services:
       - optional
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.redpanda-console.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/redpanda`)"
+      - "traefik.http.routers.redpanda-console.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_redpanda`)"
       - "traefik.http.routers.redpanda-console.entrypoints=web"
       - "traefik.http.services.redpanda-console.loadbalancer.server.port=8080"
-      - "traefik.http.middlewares.redpanda-strip.stripprefix.prefixes=/redpanda"
+      - "traefik.http.middlewares.redpanda-strip.stripprefix.prefixes=/_redpanda"
       - "traefik.http.routers.redpanda-console.middlewares=redpanda-strip"
 
   minio:
@@ -200,9 +200,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.rekoni.entrypoints=websecure"
       - "traefik.http.services.rekoni.loadbalancer.server.port=4004"
-      - "traefik.http.routers.rekoni.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/rekoni`)"
+      - "traefik.http.routers.rekoni.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_rekoni`)"
       - "traefik.http.routers.rekoni.middlewares=rekoni-stripprefix"
-      - "traefik.http.middlewares.rekoni-stripprefix.stripprefix.prefixes=/rekoni"
+      - "traefik.http.middlewares.rekoni-stripprefix.stripprefix.prefixes=/_rekoni"
       - "traefik.http.routers.rekoni.tls=true"
       - "traefik.http.routers.rekoni.tls.certresolver=letsencrypt"
 
@@ -258,14 +258,14 @@ services:
 
       # HTTP route for non-WebSocket traffic
       - "traefik.http.routers.transactor.entrypoints=websecure"
-      - "traefik.http.routers.transactor.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/transactor`)"
+      - "traefik.http.routers.transactor.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_transactor`)"
       - "traefik.http.routers.transactor.tls=true"
       - "traefik.http.routers.transactor.tls.certresolver=letsencrypt"
       - "traefik.http.services.transactor.loadbalancer.server.port=3333"
       - "traefik.http.routers.transactor.service=transactor"
       # Strip HTTP prefix
       - "traefik.http.routers.transactor.middlewares=strip-transactor-prefix"
-      - "traefik.http.middlewares.strip-transactor-prefix.stripprefix.prefixes=/transactor"
+      - "traefik.http.middlewares.strip-transactor-prefix.stripprefix.prefixes=/_transactor"
 
   collaborator:
     container_name: huly-collaborator
@@ -305,14 +305,14 @@ services:
       - "traefik.http.middlewares.strip-collaborator-ws-prefix.stripprefix.prefixes=/ws/collaborator"
       # HTTP route for non-WebSocket traffic
       - "traefik.http.routers.collaborator.entrypoints=websecure"
-      - "traefik.http.routers.collaborator.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/collaborator`)"
+      - "traefik.http.routers.collaborator.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_collaborator`)"
       - "traefik.http.routers.collaborator.tls=true"
       - "traefik.http.routers.collaborator.tls.certresolver=letsencrypt"
       - "traefik.http.services.collaborator.loadbalancer.server.port=3078"
 
       # Strip HTTP prefix
       - "traefik.http.routers.collaborator.middlewares=strip-collaborator-prefix"
-      - "traefik.http.middlewares.strip-collaborator-prefix.stripprefix.prefixes=/collaborator"
+      - "traefik.http.middlewares.strip-collaborator-prefix.stripprefix.prefixes=/_collaborator"
 
   account:
     container_name: huly-account
@@ -321,10 +321,10 @@ services:
       - SERVER_PORT=3000
       - SERVER_SECRET=${SECRET}
       - DB_URL=${CR_DB_URL}
-      - TRANSACTOR_URL=ws://transactor:3333;ws${SECURE:+s}://${HOST_ADDRESS}/transactor
+      - TRANSACTOR_URL=ws://transactor:3333;ws${SECURE:+s}://${HOST_ADDRESS}/_transactor
       - STORAGE_CONFIG=${STORAGE_CONFIG}
       - FRONT_URL=http${SECURE:+s}://${HOST_ADDRESS}
-      - STATS_URL=http${SECURE:+s}://${HOST_ADDRESS}/stats
+      - STATS_URL=http${SECURE:+s}://${HOST_ADDRESS}/_stats
       - MODEL_ENABLED=*
       - ACCOUNTS_URL=http${SECURE:+s}://${HOST_ADDRESS}
       - ACCOUNT_PORT=3000
@@ -351,9 +351,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.account.entrypoints=websecure"
       - "traefik.http.services.account.loadbalancer.server.port=3000"
-      - "traefik.http.routers.account.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/accounts`)"
+      - "traefik.http.routers.account.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_accounts`)"
       - "traefik.http.routers.account.middlewares=account-stripprefix"
-      - "traefik.http.middlewares.account-stripprefix.stripprefix.prefixes=/accounts"
+      - "traefik.http.middlewares.account-stripprefix.stripprefix.prefixes=/_accounts"
       - "traefik.http.routers.account.tls=true"
       - "traefik.http.routers.account.tls.certresolver=letsencrypt"
 
@@ -363,7 +363,7 @@ services:
     environment:
       - SERVER_SECRET=${SECRET}
       - DB_URL=${CR_DB_URL}
-      - TRANSACTOR_URL=ws://transactor:3333;ws${SECURE:+s}://${HOST_ADDRESS}/transactor
+      - TRANSACTOR_URL=ws://transactor:3333;ws${SECURE:+s}://${HOST_ADDRESS}/_transactor
       - STORAGE_CONFIG=${STORAGE_CONFIG}
       - MODEL_ENABLED=*
       - ACCOUNTS_URL=http://account:3000
@@ -394,14 +394,14 @@ services:
     environment:
       - SERVER_PORT=8080
       - SERVER_SECRET=${SECRET}
-      - LOVE_ENDPOINT=http${SECURE:+s}://${HOST_ADDRESS}/love
-      - ACCOUNTS_URL=http${SECURE:+s}://${HOST_ADDRESS}/accounts
+      - LOVE_ENDPOINT=http${SECURE:+s}://${HOST_ADDRESS}/_love
+      - ACCOUNTS_URL=http${SECURE:+s}://${HOST_ADDRESS}/_accounts
       - ACCOUNTS_URL_INTERNAL=http://account:3000
-      - REKONI_URL=http${SECURE:+s}://${HOST_ADDRESS}/rekoni
-      - CALENDAR_URL=http${SECURE:+s}://${HOST_ADDRESS}:8095
+      - REKONI_URL=http${SECURE:+s}://${HOST_ADDRESS}/_rekoni
+      - CALENDAR_URL=http${SECURE:+s}://${HOST_ADDRESS}/_calendar
       - GMAIL_URL=http${SECURE:+s}://${HOST_ADDRESS}:8088
       - TELEGRAM_URL=http${SECURE:+s}://${HOST_ADDRESS}:8086
-      - STATS_URL=http${SECURE:+s}://${HOST_ADDRESS}/stats
+      - STATS_URL=http${SECURE:+s}://${HOST_ADDRESS}/_stats
       - UPLOAD_URL=/files
       - ELASTIC_URL=http://elastic:9200
       - COLLABORATOR_URL=ws${SECURE:+s}://${HOST_ADDRESS}/ws/collaborator
@@ -412,7 +412,7 @@ services:
       - DESKTOP_UPDATES_CHANNEL=${DESKTOP_CHANNEL}
       - DISABLE_SIGNUP=${DISABLE_SIGNUP:-true}
       - PUSH_PUBLIC_KEY=${PUSH_PUBLIC_KEY}
-      - PRINT_URL=http${SECURE:+s}://${HOST_ADDRESS}/print
+      - PRINT_URL=http${SECURE:+s}://${HOST_ADDRESS}/_print
       - LIVEKIT_WS=${LIVEKIT_HOST}
       - GITHUB_APP=${GITHUB_APPID}
       - GITHUB_CLIENTID=${GITHUB_CLIENTID}
@@ -496,9 +496,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.stats.entrypoints=websecure"
       - "traefik.http.services.stats.loadbalancer.server.port=4900"
-      - "traefik.http.routers.stats.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/stats`)"
+      - "traefik.http.routers.stats.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_stats`)"
       - "traefik.http.routers.stats.middlewares=stats-stripprefix"
-      - "traefik.http.middlewares.stats-stripprefix.stripprefix.prefixes=/stats"
+      - "traefik.http.middlewares.stats-stripprefix.stripprefix.prefixes=/_stats"
       - "traefik.http.routers.stats.tls=true"
       - "traefik.http.routers.stats.tls.certresolver=letsencrypt"
 
@@ -577,9 +577,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.github.entrypoints=websecure"
       - "traefik.http.services.github.loadbalancer.server.port=3500"
-      - "traefik.http.routers.github.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/github`)"
+      - "traefik.http.routers.github.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_github`)"
       - "traefik.http.routers.github.middlewares=github-stripprefix"
-      - "traefik.http.middlewares.github-stripprefix.stripprefix.prefixes=/github"
+      - "traefik.http.middlewares.github-stripprefix.stripprefix.prefixes=/_github"
       - "traefik.http.routers.github.tls=true"
       - "traefik.http.routers.github.tls.certresolver=letsencrypt"
 
@@ -609,9 +609,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.print.entrypoints=websecure"
       - "traefik.http.services.print.loadbalancer.server.port=4005"
-      - "traefik.http.routers.print.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/print`)"
+      - "traefik.http.routers.print.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_print`)"
       - "traefik.http.routers.print.middlewares=print-stripprefix"
-      - "traefik.http.middlewares.print-stripprefix.stripprefix.prefixes=/print"
+      - "traefik.http.middlewares.print-stripprefix.stripprefix.prefixes=/_print"
       - "traefik.http.routers.print.tls=true"
       - "traefik.http.routers.print.tls.certresolver=letsencrypt"
 
@@ -675,9 +675,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.love.entrypoints=websecure"
       - "traefik.http.services.love.loadbalancer.server.port=8096"
-      - "traefik.http.routers.love.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/love`)"
+      - "traefik.http.routers.love.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_love`)"
       - "traefik.http.routers.love.middlewares=love-stripprefix"
-      - "traefik.http.middlewares.love-stripprefix.stripprefix.prefixes=/love"
+      - "traefik.http.middlewares.love-stripprefix.stripprefix.prefixes=/_love"
       - "traefik.http.routers.love.tls=true"
       - "traefik.http.routers.love.tls.certresolver=letsencrypt"
 
@@ -709,7 +709,7 @@ services:
       - MONGO_DB=%calendar-service
       - KVS_URL=http://kvs:8094
       - Credentials=${GOOGLE_CONSOLE_CREDENTIALS_JSON}
-      - WATCH_URL=https://${HOST_ADDRESS}/calendar/push
+      - WATCH_URL=https://${HOST_ADDRESS}/_calendar/push
       - ACCOUNTS_URL=http://account:3000
       - STATS_URL=http://stats:4900
       - SECRET=${SECRET}
@@ -734,10 +734,10 @@ services:
       - "host.docker.internal:host-gateway"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.calendar.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/calendar`)"
+      - "traefik.http.routers.calendar.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_calendar`)"
       - "traefik.http.routers.calendar.entrypoints=web"
       - "traefik.http.services.calendar.loadbalancer.server.port=8095"
-      - "traefik.http.middlewares.calendar-strip.stripprefix.prefixes=/calendar"
+      - "traefik.http.middlewares.calendar-strip.stripprefix.prefixes=/_calendar"
       - "traefik.http.routers.calendar.middlewares=calendar-strip"
 
   livekit:
@@ -777,14 +777,14 @@ services:
       - "traefik.http.middlewares.strip-livekit-ws-prefix.stripprefix.prefixes=/ws/livekit"
       # HTTP route for non-WebSocket traffic
       - "traefik.http.routers.livekit.entrypoints=websecure"
-      - "traefik.http.routers.livekit.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/livekit`)"
+      - "traefik.http.routers.livekit.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_livekit`)"
       - "traefik.http.routers.livekit.tls=true"
       - "traefik.http.routers.livekit.tls.certresolver=letsencrypt"
       - "traefik.http.services.livekit.loadbalancer.server.port=7881"
 
       # Strip HTTP prefix
       - "traefik.http.routers.livekit.middlewares=strip-livekit-prefix"
-      - "traefik.http.middlewares.strip-livekit-prefix.stripprefix.prefixes=/livekit"
+      - "traefik.http.middlewares.strip-livekit-prefix.stripprefix.prefixes=/_livekit"
 
 volumes:
   # These named volumes are used when custom volume paths are not specified
