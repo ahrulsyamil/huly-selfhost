@@ -214,7 +214,7 @@ services:
       - SERVER_SECRET=${SECRET}
       - DB_URL=${CR_DB_URL}
       - STORAGE_CONFIG=${STORAGE_CONFIG}
-      - FRONT_URL=http://localhost:8087
+      - FRONT_URL=http${SECURE:+s}://${HOST_ADDRESS}
       - ACCOUNTS_URL=http://account:3000
       - FULLTEXT_URL=http://fulltext:4700
       - STATS_URL=http://stats:4900
@@ -402,7 +402,6 @@ services:
       - GMAIL_URL=http${SECURE:+s}://${HOST_ADDRESS}:8088
       - TELEGRAM_URL=http${SECURE:+s}://${HOST_ADDRESS}:8086
       - STATS_URL=http${SECURE:+s}://${HOST_ADDRESS}/_stats
-      - UPLOAD_URL=/files
       - ELASTIC_URL=http://elastic:9200
       - COLLABORATOR_URL=ws${SECURE:+s}://${HOST_ADDRESS}/ws/collaborator
       - STORAGE_CONFIG=${STORAGE_CONFIG}
@@ -416,6 +415,11 @@ services:
       - LIVEKIT_WS=${LIVEKIT_HOST}
       - GITHUB_APP=${GITHUB_APP}
       - GITHUB_CLIENTID=${GITHUB_CLIENTID}
+      - PREVIEW_URL=http${SECURE:+s}://${HOST_ADDRESS}/_preview
+      - PREVIEW_CONFIG=image|http${SECURE:+s}://${HOST_ADDRESS}/_datalake/image/fit=cover,width=:width,height=:height,dpr=:dpr/:workspace/:blobId;video|http${SECURE:+s}://${HOST_ADDRESS}/_datalake/meta/:workspace/:blobId
+      - UPLOAD_URL=http${SECURE:+s}://${HOST_ADDRESS}/_datalake/upload/form-data/:workspace
+      - FILES_URL=http${SECURE:+s}://${HOST_ADDRESS}/_datalake/blob/:workspace/:blobId/:filename
+      - STREAM_URL=http${SECURE:+s}://${HOST_ADDRESS}/_stream/recording
     deploy:
       resources:
         limits:
@@ -740,6 +744,46 @@ services:
       - "traefik.http.middlewares.calendar-strip.stripprefix.prefixes=/_calendar"
       - "traefik.http.routers.calendar.middlewares=calendar-strip"
 
+  datalake:
+    container_name: huly-datalake
+    image: hardcoreeng/datalake:${HULY_VERSION}
+    restart: unless-stopped
+    environment:
+      - PORT=4030
+      - SECRET=${SECRET}
+      - ACCOUNTS_URL=http://account:3000
+      - STATS_URL=http://stats:4900
+      - DB_URL=${CR_DB_URL}
+      - BUCKETS=blobs,eu|http://minio:9000?accessKey=${MINIO_ROOT_USER}&secretKey=${MINIO_ROOT_PASSWORD}
+      - REGION=cockroach
+      - QUEUE_CONFIG=redpanda:9092
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+    depends_on:
+      minio:
+        condition: service_healthy
+      cockroach:
+        condition: service_started
+      stats:
+        condition: service_started
+      account:
+        condition: service_started
+    networks:
+      - internal-services
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.datalake.entrypoints=websecure"
+      - "traefik.http.services.datalake.loadbalancer.server.port=4030"
+      - "traefik.http.routers.datalake.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_datalake`)"
+      - "traefik.http.routers.datalake.middlewares=datalake-stripprefix"
+      - "traefik.http.middlewares.datalake-stripprefix.stripprefix.prefixes=/_datalake"
+      - "traefik.http.routers.datalake.tls=true"
+      - "traefik.http.routers.datalake.tls.certresolver=letsencrypt"
+
   livekit:
     container_name: huly-livekit
     image: livekit/livekit-server:latest
@@ -785,6 +829,95 @@ services:
       # Strip HTTP prefix
       - "traefik.http.routers.livekit.middlewares=strip-livekit-prefix"
       - "traefik.http.middlewares.strip-livekit-prefix.stripprefix.prefixes=/_livekit"
+
+  stream:
+    container_name: huly-stream
+    image: hardcoreeng/stream:${HULY_VERSION}
+    environment:
+      - STREAM_ENDPOINT_URL=datalake://datalake:4030
+      - STREAM_INSECURE=false
+      - STREAM_SERVER_SECRET=${SECRET}
+      - STREAM_MAX_PARALLEL_SCALING_COUNT=6
+      - STREAM_LOG_LEVEL=info
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - STREAM_REGION=cockroach
+      - STREAM_QUEUE_CONFIG=redpanda:9092
+    ports:
+      - "1080:1080"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+    depends_on:
+      datalake:
+        condition: service_started
+      redpanda:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - internal-services
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.stream.entrypoints=websecure"
+      - "traefik.http.services.stream.loadbalancer.server.port=1080"
+      - "traefik.http.routers.stream.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_stream`)"
+      - "traefik.http.routers.stream.middlewares=stream-stripprefix"
+      - "traefik.http.middlewares.stream-stripprefix.stripprefix.prefixes=/_stream"
+      - "traefik.http.routers.stream.tls=true"
+      - "traefik.http.routers.stream.tls.certresolver=letsencrypt"
+
+  media:
+    container_name: huly-media
+    image: hardcoreeng/media:${HULY_VERSION}
+    environment:
+      - ACCOUNTS_URL=http://account:3000
+      - SECRET=${SECRET}
+      - REGION=cockroach
+      - QUEUE_CONFIG=redpanda:9092
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+    depends_on:
+      account:
+        condition: service_started
+      redpanda:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - internal-services
+
+  preview:
+    container_name: huly-preview
+    image: hardcoreeng/preview:${HULY_VERSION}
+    environment:
+      - SECRET=${SECRET}
+      - STORAGE_CONFIG=${STORAGE_CONFIG}
+      - CACHE_PATH=/data/cache
+    ports:
+      - "4040:4040"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+    restart: unless-stopped
+    networks:
+      - internal-services
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.preview.entrypoints=websecure"
+      - "traefik.http.services.preview.loadbalancer.server.port=4040"
+      - "traefik.http.routers.preview.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_preview`)"
+      - "traefik.http.routers.preview.middlewares=preview-stripprefix"
+      - "traefik.http.middlewares.preview-stripprefix.stripprefix.prefixes=/_preview"
+      - "traefik.http.routers.preview.tls=true"
+      - "traefik.http.routers.preview.tls.certresolver=letsencrypt"
 
 volumes:
   # These named volumes are used when custom volume paths are not specified
