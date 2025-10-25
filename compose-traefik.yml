@@ -419,7 +419,7 @@ services:
       - PREVIEW_CONFIG=image|http${SECURE:+s}://${HOST_ADDRESS}/_datalake/image/fit=cover,width=:width,height=:height,dpr=:dpr/:workspace/:blobId;video|http${SECURE:+s}://${HOST_ADDRESS}/_datalake/meta/:workspace/:blobId
       - UPLOAD_URL=http${SECURE:+s}://${HOST_ADDRESS}/_datalake/upload/form-data/:workspace
       - FILES_URL=http${SECURE:+s}://${HOST_ADDRESS}/_datalake/blob/:workspace/:blobId/:filename
-      - STREAM_URL=http${SECURE:+s}://${HOST_ADDRESS}/_stream/recording
+      - STREAM_URL=http${SECURE:+s}://stream.${HOST_ADDRESS}/recording
     deploy:
       resources:
         limits:
@@ -757,6 +757,7 @@ services:
       - BUCKETS=blobs,eu|http://minio:9000?accessKey=${MINIO_ROOT_USER}&secretKey=${MINIO_ROOT_PASSWORD}
       - REGION=cockroach
       - QUEUE_CONFIG=redpanda:9092
+      - STREAM_URL=http${SECURE:+s}://stream.${HOST_ADDRESS}/recording
     deploy:
       resources:
         limits:
@@ -863,9 +864,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.stream.entrypoints=websecure"
       - "traefik.http.services.stream.loadbalancer.server.port=1080"
-      - "traefik.http.routers.stream.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_stream`)"
-      - "traefik.http.routers.stream.middlewares=stream-stripprefix"
-      - "traefik.http.middlewares.stream-stripprefix.stripprefix.prefixes=/_stream"
+      - "traefik.http.routers.stream.rule=Host(`stream.${HOST_ADDRESS}`)"
       - "traefik.http.routers.stream.tls=true"
       - "traefik.http.routers.stream.tls.certresolver=letsencrypt"
 
