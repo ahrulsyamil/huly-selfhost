@@ -420,6 +420,8 @@ services:
       - UPLOAD_URL=http${SECURE:+s}://${HOST_ADDRESS}/_datalake/upload/form-data/:workspace
       - FILES_URL=http${SECURE:+s}://${HOST_ADDRESS}/_datalake/blob/:workspace/:blobId/:filename
       - STREAM_URL=http${SECURE:+s}://${STREAM_SUBDOMAIN}/recording
+      - DATALAKE_URL=http${SECURE:+s}://${HOST_ADDRESS}/_datalake
+      - HULYLAKE_URL=http${SECURE:+s}://${HOST_ADDRESS}/_hulylake
     deploy:
       resources:
         limits:
@@ -459,6 +461,7 @@ services:
       - ACCOUNTS_URL=http://account:3000
       - STATS_URL=http://stats:4900
       - QUEUE_CONFIG=redpanda:9092
+      - HULYLAKE_URL=http${SECURE:+s}://${HOST_ADDRESS}/_hulylake
     deploy:
       resources:
         limits:
@@ -836,7 +839,7 @@ services:
     image: hardcoreeng/stream:${HULY_VERSION}
     environment:
       - STREAM_ENDPOINT_URL=datalake://datalake:4030
-      - STREAM_INSECURE=false
+      - STREAM_INSECURE=true
       - STREAM_SERVER_SECRET=${SECRET}
       - STREAM_MAX_PARALLEL_SCALING_COUNT=6
       - STREAM_LOG_LEVEL=info
@@ -917,6 +920,44 @@ services:
       - "traefik.http.middlewares.preview-stripprefix.stripprefix.prefixes=/_preview"
       - "traefik.http.routers.preview.tls=true"
       - "traefik.http.routers.preview.tls.certresolver=letsencrypt"
+
+  hulylake:
+    container_name: huly-hulylake
+    image: hardcoreeng/hulylake:${HULY_VERSION}
+    environment:
+      - HULY_TOKEN_SECRET=${SECRET}
+      - HULY_DB_CONNECTION=${CR_DB_URL}
+      - AWS_ENDPOINT_URL=http://minio:9000
+      - AWS_REGION=local
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+    ports:
+      - "8093:8093"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+    depends_on:
+      minio:
+        condition: service_healthy
+      cockroach:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - internal-services
+      - traefik-public
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hulylake.entrypoints=websecure"
+      - "traefik.http.services.hulylake.loadbalancer.server.port=8093"
+      - "traefik.http.routers.hulylake.rule=Host(`${HOST_ADDRESS}`) && PathPrefix(`/_hulylake`)"
+      - "traefik.http.routers.hulylake.middlewares=hulylake-stripprefix"
+      - "traefik.http.middlewares.hulylake-stripprefix.stripprefix.prefixes=/_hulylake"
+      - "traefik.http.routers.hulylake.tls=true"
+      - "traefik.http.routers.hulylake.tls.certresolver=letsencrypt"
 
 volumes:
   # These named volumes are used when custom volume paths are not specified
