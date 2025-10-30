@@ -7,6 +7,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "27017:27017"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - ./letsencrypt:/letsencrypt
@@ -17,6 +18,7 @@ services:
           cpus: "0.5"
     networks:
       - traefik-public
+      - internal-services
     command:
       - "--log.level=DEBUG" # set to INFO for production
       - "--api.insecure=false"
@@ -28,6 +30,7 @@ services:
       - "--providers.docker.network=traefik-public"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.mongodb.address=:27017"
       - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
       - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
       - "--certificatesresolvers.myresolver.acme.email=developers@zegen.id"
@@ -625,8 +628,6 @@ services:
   mongodb:
     container_name: huly-mongodb
     image: mongo:7-jammy
-    ports:
-      - 27017:27017
     restart: unless-stopped
     environment:
       - PUID=1000
@@ -642,6 +643,13 @@ services:
           cpus: "1.0"
     networks:
       - internal-services
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.tcp.routers.mongodb.rule=HostSNI(`*`)"
+      - "traefik.tcp.routers.mongodb.entrypoints=mongodb"
+      - "traefik.tcp.routers.mongodb.service=mongodb"
+      - "traefik.tcp.services.mongodb.loadbalancer.server.port=27017"
 
   love:
     image: hardcoreeng/love:${HULY_VERSION}
