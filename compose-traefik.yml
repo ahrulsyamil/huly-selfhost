@@ -416,13 +416,14 @@ services:
       - LIVEKIT_WS=${LIVEKIT_HOST}
       - GITHUB_APP=${GITHUB_APP}
       - GITHUB_CLIENTID=${GITHUB_CLIENTID}
-      - PREVIEW_URL=http${SECURE:+s}://${HOST_ADDRESS}/_preview
-      - PREVIEW_CONFIG=image|http${SECURE:+s}://${HOST_ADDRESS}/_datalake/image/fit=cover,width=:width,height=:height,dpr=:dpr/:workspace/:blobId;video|http${SECURE:+s}://${HOST_ADDRESS}/_datalake/meta/:workspace/:blobId
-      - UPLOAD_URL=http${SECURE:+s}://${HOST_ADDRESS}/_datalake/upload/form-data/:workspace
-      - FILES_URL=http${SECURE:+s}://${HOST_ADDRESS}/_datalake/blob/:workspace/:blobId/:filename
-      - STREAM_URL=http${SECURE:+s}://${STREAM_SUBDOMAIN}/recording
-      - DATALAKE_URL=http${SECURE:+s}://${HOST_ADDRESS}/_datalake
-      - HULYLAKE_URL=http${SECURE:+s}://${HOST_ADDRESS}/_hulylake
+      # - PREVIEW_URL=http${SECURE:+s}://${HOST_ADDRESS}/_preview
+      # - PREVIEW_CONFIG=image|http${SECURE:+s}://${HOST_ADDRESS}/_datalake/image/fit=cover,width=:width,height=:height,dpr=:dpr/:workspace/:blobId;video|http${SECURE:+s}://${HOST_ADDRESS}/_datalake/meta/:workspace/:blobId
+      # - UPLOAD_URL=http${SECURE:+s}://${HOST_ADDRESS}/_datalake/upload/form-data/:workspace
+      - UPLOAD_URL=/files
+      # - FILES_URL=http${SECURE:+s}://${HOST_ADDRESS}/_datalake/blob/:workspace/:blobId/:filename
+      # - STREAM_URL=http${SECURE:+s}://${STREAM_SUBDOMAIN}/recording
+      # - DATALAKE_URL=http${SECURE:+s}://${HOST_ADDRESS}/_datalake
+      # - HULYLAKE_URL=http${SECURE:+s}://${HOST_ADDRESS}/_hulylake
     deploy:
       resources:
         limits:
