@@ -322,10 +322,10 @@ services:
       - SERVER_PORT=3000
       - SERVER_SECRET=${SECRET}
       - DB_URL=${CR_DB_URL}
-      - TRANSACTOR_URL=ws://transactor:3333;ws${SECURE:+s}://${HOST_ADDRESS}/ws/transactor
+      - TRANSACTOR_URL=ws://transactor:3333;ws${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/ws/transactor
       - STORAGE_CONFIG=${STORAGE_CONFIG}
       - FRONT_URL=http${SECURE:+s}://${HOST_ADDRESS}
-      - STATS_URL=http${SECURE:+s}://${HOST_ADDRESS}/_stats
+      - STATS_URL=http${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/_stats
       - MODEL_ENABLED=*
       - ACCOUNTS_URL=http${SECURE:+s}://${HOST_ADDRESS}
       - ACCOUNT_PORT=3000
@@ -364,7 +364,7 @@ services:
     environment:
       - SERVER_SECRET=${SECRET}
       - DB_URL=${CR_DB_URL}
-      - TRANSACTOR_URL=ws://transactor:3333;ws${SECURE:+s}://${HOST_ADDRESS}/ws/transactor
+      - TRANSACTOR_URL=ws://transactor:3333;ws${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/ws/transactor
       - STORAGE_CONFIG=${STORAGE_CONFIG}
       - MODEL_ENABLED=*
       - ACCOUNTS_URL=http://account:3000
@@ -395,16 +395,16 @@ services:
     environment:
       - SERVER_PORT=8080
       - SERVER_SECRET=${SECRET}
-      - LOVE_ENDPOINT=http${SECURE:+s}://${HOST_ADDRESS}/_love
-      - ACCOUNTS_URL=http${SECURE:+s}://${HOST_ADDRESS}/_accounts
+      - LOVE_ENDPOINT=http${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/_love
+      - ACCOUNTS_URL=http${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/_accounts
       - ACCOUNTS_URL_INTERNAL=http://account:3000
-      - REKONI_URL=http${SECURE:+s}://${HOST_ADDRESS}/_rekoni
-      - CALENDAR_URL=http${SECURE:+s}://${HOST_ADDRESS}/_calendar
+      - REKONI_URL=http${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/_rekoni
+      - CALENDAR_URL=http${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/_calendar
       - GMAIL_URL=http${SECURE:+s}://${HOST_ADDRESS}:8088
       - TELEGRAM_URL=http${SECURE:+s}://${HOST_ADDRESS}:8086
-      - STATS_URL=http${SECURE:+s}://${HOST_ADDRESS}/_stats
+      - STATS_URL=http${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/_stats
       - ELASTIC_URL=http://elastic:9200
-      - COLLABORATOR_URL=ws${SECURE:+s}://${HOST_ADDRESS}/ws/collaborator
+      - COLLABORATOR_URL=ws${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/ws/collaborator
       - STORAGE_CONFIG=${STORAGE_CONFIG}
       - TITLE=${TITLE:-Huly Self Host}
       - DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-en}
@@ -412,18 +412,18 @@ services:
       - DESKTOP_UPDATES_CHANNEL=${DESKTOP_CHANNEL}
       - DISABLE_SIGNUP=${DISABLE_SIGNUP:-true}
       - PUSH_PUBLIC_KEY=${PUSH_PUBLIC_KEY}
-      - PRINT_URL=http${SECURE:+s}://${HOST_ADDRESS}/_print
+      - PRINT_URL=http${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/_print
       - LIVEKIT_WS=${LIVEKIT_HOST}
       - GITHUB_APP=${GITHUB_APP}
       - GITHUB_CLIENTID=${GITHUB_CLIENTID}
-      # - PREVIEW_URL=http${SECURE:+s}://${HOST_ADDRESS}/_preview
-      # - PREVIEW_CONFIG=image|http${SECURE:+s}://${HOST_ADDRESS}/_datalake/image/fit=cover,width=:width,height=:height,dpr=:dpr/:workspace/:blobId;video|http${SECURE:+s}://${HOST_ADDRESS}/_datalake/meta/:workspace/:blobId
-      # - UPLOAD_URL=http${SECURE:+s}://${HOST_ADDRESS}/_datalake/upload/form-data/:workspace
-      - UPLOAD_URL=/files
-      # - FILES_URL=http${SECURE:+s}://${HOST_ADDRESS}/_datalake/blob/:workspace/:blobId/:filename
-      # - STREAM_URL=http${SECURE:+s}://${STREAM_SUBDOMAIN}/recording
-      # - DATALAKE_URL=http${SECURE:+s}://${HOST_ADDRESS}/_datalake
-      # - HULYLAKE_URL=http${SECURE:+s}://${HOST_ADDRESS}/_hulylake
+      # - PREVIEW_URL=http${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/_preview
+      - PREVIEW_CONFIG=image|http${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/_datalake/image/fit=cover,width=:width,height=:height,dpr=:dpr/:workspace/:blobId;video|http${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/_datalake/meta/:workspace/:blobId
+      - UPLOAD_URL=http${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/_datalake/upload/form-data/:workspace
+      # - UPLOAD_URL=/files
+      - FILES_URL=http${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/_datalake/blob/:workspace/:blobId/:filename
+      - STREAM_URL=http${SECURE:+s}://${STREAM_SUBDOMAIN}/recording
+      - DATALAKE_URL=http${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/_datalake
+      # - HULYLAKE_URL=http${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/_hulylake
     deploy:
       resources:
         limits:
@@ -463,7 +463,7 @@ services:
       - ACCOUNTS_URL=http://account:3000
       - STATS_URL=http://stats:4900
       - QUEUE_CONFIG=redpanda:9092
-      - HULYLAKE_URL=http${SECURE:+s}://${HOST_ADDRESS}/_hulylake
+      - HULYLAKE_URL=http${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/_hulylake
     deploy:
       resources:
         limits:
@@ -564,7 +564,7 @@ services:
       - CLIENT_ID=${GITHUB_CLIENTID}
       - CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
       - PRIVATE_KEY=${GITHUB_PRIVATE_KEY}
-      - COLLABORATOR_URL=ws${SECURE:+s}://${HOST_ADDRESS}/ws/collaborator
+      - COLLABORATOR_URL=ws${SECURE:+s}://${HOST_ADDRESS}:${HTTP_PORT}/ws/collaborator
       - WEBHOOK_SECRET={GITHUB_WEBHOOK_SECRET}
       - FRONT_URL=http${SECURE:+s}://${HOST_ADDRESS}
       - BOT_NAME=${APP_NAME}[bot]
@@ -716,7 +716,7 @@ services:
       - MONGO_DB=%calendar-service
       - KVS_URL=http://kvs:8094
       - Credentials=${GOOGLE_CONSOLE_CREDENTIALS_JSON}
-      - WATCH_URL=https://${HOST_ADDRESS}/_calendar/push
+      - WATCH_URL=https://${HOST_ADDRESS}:${HTTP_PORT}/_calendar/push
       - ACCOUNTS_URL=http://account:3000
       - STATS_URL=http://stats:4900
       - SECRET=${SECRET}
