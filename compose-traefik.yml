@@ -130,9 +130,6 @@ services:
     image: minio/minio:RELEASE.2025-04-22T22-12-26Z
     container_name: huly-minio
     restart: unless-stopped
-    ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
@@ -168,9 +165,6 @@ services:
       - ES_JAVA_OPTS=-Xms1024m -Xmx1024m
       - http.cors.enabled=true
       - http.cors.allow-origin=http://localhost:8082,http://localhost:5601
-    ports:
-      - "${ELASTIC_PORT:-9200}:9200"
-      - "${ELASTIC_PORT_HTTP:-9300}:9300"
     deploy:
       resources:
         limits:
@@ -533,8 +527,6 @@ services:
   mail:
     container_name: huly-mail
     image: hardcoreeng/mail:${HULY_VERSION}
-    ports:
-      - 8097:8097
     environment:
       - PORT=8097
       - SOURCE=${SMTP_MAIL_FROM}
@@ -792,10 +784,6 @@ services:
     container_name: huly-livekit
     image: livekit/livekit-server:latest
     command: --config /etc/livekit/livekit.yaml
-    ports:
-      - "7880:7880"
-      - "7881:7881"
-      - "7882:7882/udp"
     environment:
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
@@ -847,8 +835,6 @@ services:
       - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
       - STREAM_REGION=cockroach
       - STREAM_QUEUE_CONFIG=redpanda:9092
-    ports:
-      - "1080:1080"
     deploy:
       resources:
         limits:
@@ -900,8 +886,6 @@ services:
       - SECRET=${SECRET}
       - STORAGE_CONFIG=${STORAGE_CONFIG}
       - CACHE_PATH=/data/cache
-    ports:
-      - "4040:4040"
     deploy:
       resources:
         limits:
@@ -931,8 +915,6 @@ services:
       - AWS_REGION=local
       - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
       - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
-    ports:
-      - "8093:8093"
     deploy:
       resources:
         limits:
